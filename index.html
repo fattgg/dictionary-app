@@ -4,15 +4,50 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dictionary App</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
-    <h1>Dictionary Lookup</h1>
-    <input type="text" id="wordInput" placeholder="Enter a word..." />
-    <button onclick="searchWord()">Search</button>
-    <div id="result"></div>
+    <header>
+      <h1><i class="fas fa-book-open"></i> Dictionary Lookup</h1>
+      <div class="search-container">
+        <input type="text" id="wordInput" placeholder="Enter a word..." autocomplete="off" />
+        <button onclick="searchWord()"><i class="fas fa-search"></i> Search</button>
+        <button id="randomBtn" onclick="getRandomWord()"><i class="fas fa-random"></i> Random</button>
+      </div>
+      <div class="suggestions" id="suggestions"></div>
+    </header>
+    
+    <main>
+      <div class="word-header" id="wordHeader">
+        <div class="word-info">
+          <h2 id="wordTitle"></h2>
+          <p id="phonetic"></p>
+        </div>
+        <button id="speakBtn" class="speak-btn"><i class="fas fa-volume-up"></i></button>
+      </div>
+      
+      <div class="results" id="results">
+        <div class="welcome-message">
+          <i class="fas fa-search fa-3x"></i>
+          <h2>Search for a word</h2>
+          <p>Type a word in the search box above to get definitions, examples, and more.</p>
+        </div>
+      </div>
+      
+      <div class="history" id="historySection">
+        <h3><i class="fas fa-history"></i> Search History</h3>
+        <div class="history-list" id="historyList"></div>
+        <button id="clearHistory" class="clear-btn">Clear History</button>
+      </div>
+    </main>
   </div>
+  
+  <footer>
+    <p>Powered by Free Dictionary API</p>
+  </footer>
+  
   <script src="script.js"></script>
 </body>
 </html>
