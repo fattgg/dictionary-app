@@ -10,7 +10,15 @@
 <body>
   <div class="container">
     <header>
-      <h1><i class="fas fa-book-open"></i> Dictionary Lookup</h1>
+      <div class="header-top">
+        <h1><i class="fas fa-book-open"></i> Dictionary Lookup</h1>
+        <div class="header-controls">
+          <button id="themeToggle" class="icon-btn" title="Toggle dark mode">
+            <i class="fas fa-moon"></i>
+          </button>
+        </div>
+      </div>
+      
       <div class="search-container">
         <input type="text" id="wordInput" placeholder="Enter a word..." autocomplete="off" />
         <button onclick="searchWord()"><i class="fas fa-search"></i> Search</button>
@@ -25,7 +33,14 @@
           <h2 id="wordTitle"></h2>
           <p id="phonetic"></p>
         </div>
-        <button id="speakBtn" class="speak-btn"><i class="fas fa-volume-up"></i></button>
+        <div class="word-controls">
+          <button id="speakBtn" class="icon-btn" title="Pronounce word">
+            <i class="fas fa-volume-up"></i>
+          </button>
+          <button id="favoriteBtn" class="icon-btn" title="Add to favorites">
+            <i class="far fa-star"></i>
+          </button>
+        </div>
       </div>
       
       <div class="results" id="results">
@@ -33,13 +48,36 @@
           <i class="fas fa-search fa-3x"></i>
           <h2>Search for a word</h2>
           <p>Type a word in the search box above to get definitions, examples, and more.</p>
+          <div class="word-of-the-day" id="wordOfTheDay"></div>
         </div>
       </div>
       
-      <div class="history" id="historySection">
-        <h3><i class="fas fa-history"></i> Search History</h3>
-        <div class="history-list" id="historyList"></div>
-        <button id="clearHistory" class="clear-btn">Clear History</button>
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="definitions">Definitions</button>
+        <button class="tab-btn" data-tab="favorites">Favorites</button>
+        <button class="tab-btn" data-tab="crossword">Crossword Helper</button>
+      </div>
+      
+      <div class="tab-content active" id="definitions-tab">
+        <div class="history" id="historySection">
+          <h3><i class="fas fa-history"></i> Search History</h3>
+          <div class="history-list" id="historyList"></div>
+          <button id="clearHistory" class="clear-btn">Clear History</button>
+        </div>
+      </div>
+      
+      <div class="tab-content" id="favorites-tab">
+        <h3><i class="fas fa-star"></i> Favorite Words</h3>
+        <div class="favorites-list" id="favoritesList"></div>
+      </div>
+      
+      <div class="tab-content" id="crossword-tab">
+        <h3><i class="fas fa-question"></i> Crossword Helper</h3>
+        <div class="crossword-inputs">
+          <input type="text" id="crosswordPattern" placeholder="Enter pattern (e.g., 'a__le')" />
+          <button onclick="searchCrossword()">Find Matches</button>
+        </div>
+        <div class="crossword-results" id="crosswordResults"></div>
       </div>
     </main>
   </div>

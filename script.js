@@ -3,17 +3,27 @@ const resultsDiv = document.getElementById('results');
 const wordTitle = document.getElementById('wordTitle');
 const phonetic = document.getElementById('phonetic');
 const speakBtn = document.getElementById('speakBtn');
+const favoriteBtn = document.getElementById('favoriteBtn');
+const themeToggle = document.getElementById('themeToggle');
 const suggestionsDiv = document.getElementById('suggestions');
 const historyList = document.getElementById('historyList');
 const clearHistoryBtn = document.getElementById('clearHistory');
 const historySection = document.getElementById('historySection');
+const wordOfTheDay = document.getElementById('wordOfTheDay');
+const favoritesList = document.getElementById('favoritesList');
+const crosswordResults = document.getElementById('crosswordResults');
 
+let currentWord = '';
 let searchHistory = JSON.parse(localStorage.getItem('dictionaryHistory')) || [];
-let debounceTimer;
+let favorites = JSON.parse(localStorage.getItem('dictionaryFavorites')) || [];
+let darkMode = JSON.parse(localStorage.getItem('darkMode')) || false;
 
 function init() {
-  displayHistory();
+  checkDarkModePreference();
   setupEventListeners();
+  displayHistory();
+  displayFavorites();
+  getWordOfTheDay();
 }
 
 function setupEventListeners() {
@@ -41,11 +51,34 @@ function setupEventListeners() {
   });
   
   speakBtn.addEventListener('click', speakWord);
+  favoriteBtn.addEventListener('click', toggleFavorite);
+  themeToggle.addEventListener('click', toggleDarkMode);
   clearHistoryBtn.addEventListener('click', clearHistory);
+  
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+}
+
+function toggleDarkMode() {
+  darkMode = !darkMode;
+  document.body.classList.toggle('dark-mode', darkMode);
+  localStorage.setItem('darkMode', JSON.stringify(darkMode));
+  themeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+}
+
+function checkDarkModePreference() {
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (prefersDark && !localStorage.getItem('darkMode')) {
+    darkMode = true;
+  }
+  document.body.classList.toggle('dark-mode', darkMode);
+  themeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
 }
 
 async function searchWord() {
   const word = wordInput.value.trim();
+  currentWord = word;
   
   if (!word) {
     showError('Please enter a word.');
@@ -64,6 +97,7 @@ async function searchWord() {
     displayResults(data);
     addToHistory(word);
     hideSuggestions();
+    updateFavoriteButton(word);
   } catch (error) {
     showError('Word not found. Please try another word.');
     console.error('Error:', error);
@@ -117,6 +151,7 @@ function displayResults(data) {
   }
   
   resultsDiv.innerHTML = html;
+  switchTab('definitions');
 }
 
 function getPartOfSpeechIcon(pos) {
@@ -141,6 +176,8 @@ function speakWord() {
     audio.play().catch(e => console.error('Error playing audio:', e));
   }
 }
+
+let debounceTimer;
 
 async function fetchSuggestions(query) {
   try {
@@ -208,6 +245,115 @@ function clearHistory() {
   searchHistory = [];
   localStorage.removeItem('dictionaryHistory');
   displayHistory();
+}
+
+function toggleFavorite() {
+  if (!currentWord) return;
+  
+  const index = favorites.findIndex(fav => fav.word.toLowerCase() === currentWord.toLowerCase());
+  
+  if (index === -1) {
+    favorites.unshift({
+      word: currentWord,
+      date: new Date().toISOString()
+    });
+    favoriteBtn.innerHTML = '<i class="fas fa-star"></i>';
+  } else {
+    favorites.splice(index, 1);
+    favoriteBtn.innerHTML = '<i class="far fa-star"></i>';
+  }
+  
+  localStorage.setItem('dictionaryFavorites', JSON.stringify(favorites));
+  displayFavorites();
+}
+
+function displayFavorites() {
+  favoritesList.innerHTML = favorites.map(fav => `
+    <div class="favorite-item" onclick="searchFromHistory('${fav.word}')">
+      ${fav.word}
+      <button class="remove-favorite" onclick="removeFavorite(event, '${fav.word}')">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  `).join('');
+}
+
+function removeFavorite(event, word) {
+  event.stopPropagation();
+  favorites = favorites.filter(fav => fav.word !== word);
+  localStorage.setItem('dictionaryFavorites', JSON.stringify(favorites));
+  displayFavorites();
+  updateFavoriteButton(currentWord);
+}
+
+function updateFavoriteButton(word) {
+  if (!word) return;
+  const isFavorite = favorites.some(fav => fav.word.toLowerCase() === word.toLowerCase());
+  favoriteBtn.innerHTML = isFavorite ? '<i class="fas fa-star"></i>' : '<i class="far fa-star"></i>';
+}
+
+async function getWordOfTheDay() {
+  try {
+    const today = new Date().toDateString();
+    const cachedWord = localStorage.getItem('wordOfTheDay');
+    
+    if (cachedWord) {
+      const { word, date } = JSON.parse(cachedWord);
+      if (date === today) {
+        displayWordOfTheDay(word);
+        return;
+      }
+    }
+    
+    const response = await fetch('https://random-word-api.herokuapp.com/word?number=1');
+    const [word] = await response.json();
+    
+    localStorage.setItem('wordOfTheDay', JSON.stringify({ word, date: today }));
+    displayWordOfTheDay(word);
+  } catch (error) {
+    console.error('Failed to get word of the day:', error);
+  }
+}
+
+function displayWordOfTheDay(word) {
+  wordOfTheDay.innerHTML = `
+    <h3>Word of the Day</h3>
+    <p><strong>${word}</strong> - <a href="#" onclick="event.preventDefault(); searchFromHistory('${word}')">Look up</a></p>
+  `;
+}
+
+async function searchCrossword() {
+  const pattern = document.getElementById('crosswordPattern').value.trim().toLowerCase();
+  
+  if (!pattern || !pattern.includes('_')) {
+    crosswordResults.innerHTML = '<p>Enter a pattern with underscores (e.g., "a__le")</p>';
+    return;
+  }
+  
+  try {
+    const response = await fetch(`https://api.datamuse.com/words?sp=${pattern}&max=20`);
+    const words = await response.json();
+    
+    if (words.length === 0) {
+      crosswordResults.innerHTML = '<p>No matches found</p>';
+      return;
+    }
+    
+    crosswordResults.innerHTML = words
+      .map(word => `<div class="crossword-word" onclick="searchFromHistory('${word.word}')">${word.word}</div>`)
+      .join('');
+  } catch (error) {
+    crosswordResults.innerHTML = '<p>Error fetching crossword matches</p>';
+  }
+}
+
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-btn, .tab-content').forEach(el => {
+    el.classList.remove('active');
+  });
+  
+  document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
+  document.getElementById(`${tabId}-tab`).classList.add('active');
 }
 
 async function getRandomWord() {
