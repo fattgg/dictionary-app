@@ -1,48 +1,86 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light" data-readability="false">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dictionary App</title>
+  <title>Enhanced Dictionary App</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="themes.css" />
 </head>
 <body>
   <div class="container">
     <header>
       <div class="header-top">
-        <h1><i class="fas fa-book-open"></i> Dictionary Lookup</h1>
+        <h1><i class="fas fa-book-open"></i> Dictionary Pro</h1>
         <div class="header-controls">
-          <button id="themeToggle" class="icon-btn" title="Toggle dark mode">
-            <i class="fas fa-moon"></i>
+          <button id="readabilityToggle" class="icon-btn" title="Toggle Readability Mode">
+            <i class="fas fa-text-height"></i>
           </button>
+          <div class="theme-dropdown">
+            <button class="theme-btn"><i class="fas fa-palette"></i> Theme</button>
+            <div class="theme-options">
+              <button data-theme="light">☀️ Light</button>
+              <button data-theme="dark">🌙 Dark</button>
+              <button data-theme="blue">🔵 Ocean</button>
+              <button data-theme="green">🟢 Nature</button>
+              <button data-theme="sepia">🟤 Sepia</button>
+            </div>
+          </div>
         </div>
       </div>
-      
+
       <div class="search-container">
-        <input type="text" id="wordInput" placeholder="Enter a word..." autocomplete="off" />
+        <div class="search-input-container">
+          <input type="text" id="wordInput" placeholder="Enter a word..." autocomplete="off" />
+          <button id="advancedSearchToggle" class="icon-btn">
+            <i class="fas fa-sliders-h"></i>
+          </button>
+        </div>
         <button onclick="searchWord()"><i class="fas fa-search"></i> Search</button>
-        <button id="randomBtn" onclick="getRandomWord()"><i class="fas fa-random"></i> Random</button>
+        <button id="randomBtn"><i class="fas fa-random"></i></button>
       </div>
+
+      <div class="advanced-search" id="advancedSearch">
+        <div class="filter-group">
+          <label>Part of Speech:</label>
+          <select id="posFilter">
+            <option value="">Any</option>
+            <option value="noun">Noun</option>
+            <option value="verb">Verb</option>
+            <option value="adjective">Adjective</option>
+            <option value="adverb">Adverb</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Length:</label>
+          <select id="lengthFilter">
+            <option value="">Any</option>
+            <option value="short">Short (1-4 letters)</option>
+            <option value="medium">Medium (5-8)</option>
+            <option value="long">Long (9+)</option>
+          </select>
+        </div>
+      </div>
+
       <div class="suggestions" id="suggestions"></div>
     </header>
-    
+
     <main>
       <div class="word-header" id="wordHeader">
         <div class="word-info">
           <h2 id="wordTitle"></h2>
-          <p id="phonetic"></p>
+          <div class="word-meta">
+            <p id="phonetic"></p>
+            <div class="trend-badge" id="trendBadge"></div>
+          </div>
         </div>
         <div class="word-controls">
-          <button id="speakBtn" class="icon-btn" title="Pronounce word">
-            <i class="fas fa-volume-up"></i>
-          </button>
-          <button id="favoriteBtn" class="icon-btn" title="Add to favorites">
-            <i class="far fa-star"></i>
-          </button>
+          <button id="speakBtn" class="icon-btn"><i class="fas fa-volume-up"></i></button>
+          <button id="favoriteBtn" class="icon-btn"><i class="far fa-star"></i></button>
         </div>
       </div>
-      
+
       <div class="results" id="results">
         <div class="welcome-message">
           <i class="fas fa-search fa-3x"></i>
@@ -51,41 +89,38 @@
           <div class="word-of-the-day" id="wordOfTheDay"></div>
         </div>
       </div>
-      
+
       <div class="tabs">
-        <button class="tab-btn active" data-tab="definitions">Definitions</button>
-        <button class="tab-btn" data-tab="favorites">Favorites</button>
-        <button class="tab-btn" data-tab="crossword">Crossword Helper</button>
+        <button class="tab-btn active" data-tab="definitions">
+          <i class="fas fa-book"></i> Definitions
+        </button>
+        <button class="tab-btn" data-tab="trends">
+          <i class="fas fa-chart-line"></i> Trends
+        </button>
+        <button class="tab-btn" data-tab="favorites">
+          <i class="fas fa-star"></i> Favorites
+        </button>
       </div>
+
+      <div class="tab-content active" id="definitions-tab"></div>
       
-      <div class="tab-content active" id="definitions-tab">
-        <div class="history" id="historySection">
-          <h3><i class="fas fa-history"></i> Search History</h3>
-          <div class="history-list" id="historyList"></div>
-          <button id="clearHistory" class="clear-btn">Clear History</button>
+      <div class="tab-content" id="trends-tab">
+        <div class="trends-container" id="trendsContainer">
+          <div class="loader" id="trendsLoader"></div>
         </div>
       </div>
       
       <div class="tab-content" id="favorites-tab">
-        <h3><i class="fas fa-star"></i> Favorite Words</h3>
         <div class="favorites-list" id="favoritesList"></div>
       </div>
-      
-      <div class="tab-content" id="crossword-tab">
-        <h3><i class="fas fa-question"></i> Crossword Helper</h3>
-        <div class="crossword-inputs">
-          <input type="text" id="crosswordPattern" placeholder="Enter pattern (e.g., 'a__le')" />
-          <button onclick="searchCrossword()">Find Matches</button>
-        </div>
-        <div class="crossword-results" id="crosswordResults"></div>
-      </div>
     </main>
+
+    <footer>
+      <p>Powered by Dictionary API & Google Trends</p>
+    </footer>
   </div>
-  
-  <footer>
-    <p>Powered by Free Dictionary API</p>
-  </footer>
-  
+
   <script src="script.js"></script>
+  <script src="trends.js"></script>
 </body>
 </html>

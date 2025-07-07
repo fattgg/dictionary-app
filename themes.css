@@ -1,0 +1,102 @@
+[data-theme="light"] {
+  --primary-color: #4a6fa5;
+  --secondary-color: #166088;
+  --accent-color: #4fc3f7;
+  --background-color: #f8f9fa;
+  --text-color: #333;
+  --card-bg: #ffffff;
+  --border-color: #e0e0e0;
+}
+
+[data-theme="dark"] {
+  --primary-color: #6b8cbd;
+  --secondary-color: #4fc3f7;
+  --background-color: #1a1a2e;
+  --text-color: #e6e6e6;
+  --card-bg: #16213e;
+  --border-color: #2a2a3c;
+}
+
+[data-theme="blue"] {
+  --primary-color: #1e88e5;
+  --secondary-color: #0d47a1;
+  --accent-color: #00b4d8;
+  --background-color: #e3f2fd;
+  --text-color: #0a2463;
+  --card-bg: #bbdefb;
+}
+
+[data-theme="green"] {
+  --primary-color: #2e7d32;
+  --secondary-color: #1b5e20;
+  --accent-color: #64dd17;
+  --background-color: #e8f5e9;
+  --text-color: #1b5e20;
+  --card-bg: #c8e6c9;
+}
+
+[data-theme="sepia"] {
+  --primary-color: #6d4c41;
+  --secondary-color: #4e342e;
+  --accent-color: #a1887f;
+  --background-color: #f4ecd8;
+  --text-color: #3e2723;
+  --card-bg: #e6d5b8;
+}
+
+.theme-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.theme-btn {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.theme-options {
+  display: none;
+  position: absolute;
+  right: 0;
+  background: white;
+  min-width: 120px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+  z-index: 1;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.theme-dropdown:hover .theme-options {
+  display: block;
+}
+
+.theme-options button {
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--text-color);
+}
+
+.theme-options button:hover {
+  background-color: #f1f1f1;
+}
+
+[data-theme="dark"] .theme-options,
+[data-theme="dark"] .theme-options button {
+  background-color: #16213e;
+  color: #e6e6e6;
+}
+
+[data-theme="dark"] .theme-options button:hover {
+  background-color: #2a2a3c;
+}
