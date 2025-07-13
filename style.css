@@ -180,7 +180,7 @@ button.icon-btn {
   padding: 0;
   border-radius: 50%;
   background-color: rgba(255,255,255,0.1);
-  color: white;
+  color: rgb(143, 3, 3);
 }
 
 button.icon-btn:hover {
