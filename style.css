@@ -285,18 +285,6 @@ button.icon-btn:hover {
   gap: 0.5rem;
 }
 
-.trend-badge {
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  background-color: var(--primary-light);
-  color: white;
-}
-
 .tabs {
   display: flex;
   border-bottom: 1px solid var(--border-color);
@@ -399,15 +387,6 @@ button.icon-btn:hover {
 .antonym {
   background-color: rgba(230, 57, 70, 0.1);
   color: var(--error-color);
-}
-
-.trends-container {
-  min-height: 300px;
-  position: relative;
-}
-
-.trend-chart {
-  margin-bottom: 2rem;
 }
 
 .chart {
@@ -678,4 +657,236 @@ button.icon-btn:hover {
 
 .fa-spinner {
   animation: spin 1s linear infinite;
+}
+
+.crossword-tools {
+  padding: 1.5rem;
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.pattern-input {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.pattern-input input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.crossword-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.crossword-word {
+  padding: 0.5rem;
+  background: var(--background-color);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.crossword-word:hover {
+  background: var(--primary-light);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.quiz-container {
+  background: var(--card-bg);
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.quiz-question {
+  font-size: 1.25rem;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+
+.quiz-options {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.quiz-option {
+  padding: 0.75rem 1rem;
+  background: var(--background-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.quiz-option:hover {
+  background: var(--primary-light);
+  color: white;
+}
+
+.quiz-option.correct {
+  background: var(--success-color);
+  color: white;
+}
+
+.quiz-option.incorrect {
+  background: var(--error-color);
+  color: white;
+}
+
+.quiz-feedback {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  display: none;
+}
+
+.quiz-feedback.show {
+  display: block;
+}
+
+.quiz-button {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.flashcard-container {
+  background: var(--card-bg);
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+}
+
+.flashcard {
+  width: 100%;
+  max-width: 400px;
+  height: 250px;
+  margin: 0 auto 1.5rem;
+  perspective: 1000px;
+}
+
+.flashcard-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+.flashcard.flipped .flashcard-inner {
+  transform: rotateY(180deg);
+}
+
+.flashcard-front,
+.flashcard-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.flashcard-front {
+  background: var(--primary-color);
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.flashcard-back {
+  background: var(--card-bg);
+  transform: rotateY(180deg);
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.flashcard-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.flashcard-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .flashcard {
+    height: 200px;
+  }
+  
+  .quiz-options {
+    grid-template-columns: 1fr;
+  }
+}
+
+.flashcard.flipped .flashcard-inner {
+  transform: rotateY(180deg);
+}
+
+.flashcard-front, .flashcard-back {
+  backface-visibility: hidden;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+}
+
+.flashcard-back {
+  transform: rotateY(180deg);
+}
+
+.quiz-option.correct {
+  background: var(--success-color);
+  color: white;
+}
+
+.quiz-option.incorrect {
+  background: var(--error-color);
+  color: white;
+}
+
+.quiz-feedback.correct {
+  background: rgba(42, 157, 143, 0.1);
+  color: var(--success-color);
+}
+
+.quiz-feedback.incorrect {
+  background: rgba(230, 57, 70, 0.1);
+  color: var(--error-color);
+}
+
+.crossword-word {
+  padding: 0.5rem;
+  background: var(--background-color);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.crossword-word:hover {
+  background: var(--primary-light);
+  color: white;
+  transform: translateY(-2px);
 }

@@ -21,15 +21,27 @@ const elements = {
   trendsContainer: document.getElementById('trendsContainer')
 };
 
+const COMMON_WORDS = [
+  'hello', 'world', 'apple', 'banana', 'computer', 'sun', 'moon', 
+  'water', 'fire', 'earth', 'love', 'happy', 'sad', 'run', 'walk',
+  'book', 'read', 'write', 'school', 'teacher', 'dog', 'cat', 
+  'house', 'tree', 'car', 'friend', 'family', 'music', 'art'
+];
+
 const state = {
   currentWord: '',
   searchHistory: JSON.parse(localStorage.getItem('dictionaryHistory')) || [],
   favorites: JSON.parse(localStorage.getItem('dictionaryFavorites')) || [],
   currentTheme: localStorage.getItem('theme') || 'light',
   readabilityMode: localStorage.getItem('readability') === 'true',
-  touchStartX: null
+  touchStartX: null,
+  currentQuiz: null,
+  flashcardWords: [],
+  wordCache: JSON.parse(localStorage.getItem('wordCache')) || {},
+  retryCount: 0
 };
 
+// Utility Functions
 function debounce(func, timeout = 300) {
   let timer;
   return (...args) => {
@@ -38,6 +50,11 @@ function debounce(func, timeout = 300) {
   };
 }
 
+function isValidWord(word) {
+  return word && /^[a-zA-Z-]+$/.test(word) && word.length <= 20;
+}
+
+// Display Functions
 function showLoading() {
   elements.resultsDiv.innerHTML = `
     <div class="loading">
@@ -52,6 +69,7 @@ function showError(message) {
     <div class="error-message">
       <i class="fas fa-exclamation-triangle"></i>
       <p>${message}</p>
+      <button onclick="searchWord()" class="retry-btn">Retry</button>
     </div>
   `;
 }
@@ -60,71 +78,46 @@ function hideSuggestions() {
   elements.suggestionsDiv.style.display = 'none';
 }
 
-function handleInput() {
-  const query = elements.wordInput.value.trim();
-  if (query.length > 1) {
-    fetchSuggestions(query);
-  } else {
-    hideSuggestions();
+// Dictionary Functions
+async function fetchWordData(word) {
+  // Check cache first
+  if (state.wordCache[word.toLowerCase()]) {
+    return state.wordCache[word.toLowerCase()];
   }
-}
 
-async function fetchSuggestions(query) {
   try {
-    const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${query}`);
-    if (!response.ok) throw new Error('No suggestions');
+    const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+    
+    if (response.status === 404) {
+      throw new Error('Word not found');
+    }
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    
     const data = await response.json();
-    showSuggestions([data[0].word]);
+    
+    if (!data || !data[0] || !data[0].word) {
+      throw new Error('Invalid word data received');
+    }
+    
+    // Cache the successful response
+    state.wordCache[word.toLowerCase()] = data[0];
+    localStorage.setItem('wordCache', JSON.stringify(state.wordCache));
+    
+    return data[0];
   } catch (error) {
-    hideSuggestions();
+    console.error('Fetch error:', error);
+    throw error;
   }
-}
-
-function showSuggestions(suggestions) {
-  if (!suggestions.length) {
-    hideSuggestions();
-    return;
-  }
-  elements.suggestionsDiv.innerHTML = suggestions.map(word => `
-    <div class="suggestion-item" onclick="searchFromHistory('${word}')">${word}</div>
-  `).join('');
-  elements.suggestionsDiv.style.display = 'block';
-}
-
-function init() {
-  applyTheme(state.currentTheme);
-  setupEventListeners();
-  loadPreferences();
-  displayHistory();
-  displayFavorites();
-  getWordOfTheDay();
-  setupTouchGestures();
-}
-
-function setupEventListeners() {
-  elements.wordInput.addEventListener('keypress', (e) => e.key === 'Enter' && searchWord());
-  elements.wordInput.addEventListener('input', debounce(handleInput, 300));
-  
-  elements.speakBtn.addEventListener('click', speakWord);
-  elements.favoriteBtn.addEventListener('click', toggleFavorite);
-  elements.clearHistoryBtn?.addEventListener('click', clearHistory);
-  elements.readabilityToggle.addEventListener('click', toggleReadability);
-  elements.advancedSearchToggle.addEventListener('click', toggleAdvancedSearch);
-  elements.randomBtn.addEventListener('click', getRandomWord);
-  
-  document.querySelectorAll('.theme-options button').forEach(btn => {
-    btn.addEventListener('click', () => applyTheme(btn.dataset.theme));
-  });
-  
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
-  });
 }
 
 async function searchWord() {
   const word = elements.wordInput.value.trim();
-  if (!word) {
-    showError('Please enter a word.');
+  
+  if (!isValidWord(word)) {
+    showError('Please enter a valid English word (letters/hyphens only, max 20 chars)');
     return;
   }
 
@@ -132,17 +125,22 @@ async function searchWord() {
   
   try {
     showLoading();
-    const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
-    if (!response.ok) throw new Error('Word not found');
-    
-    const data = await response.json();
-    processWordData(data[0]);
+    const wordData = await fetchWordData(word);
+    processWordData(wordData);
     addToHistory(word);
     hideSuggestions();
     updateFavoriteButton(word);
-    loadTrendData(word);
+    state.retryCount = 0;
   } catch (error) {
-    showError('Word not found. Please try another word.');
+    if (state.retryCount < 2) {
+      state.retryCount++;
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return searchWord();
+    }
+    state.retryCount = 0;
+    showError(error.message.includes('not found') 
+      ? 'Word not found. Please try another word.'
+      : 'Dictionary service unavailable. Please try again later.');
   }
 }
 
@@ -189,39 +187,79 @@ function processWordData(wordData) {
   switchTab('definitions');
 }
 
-function applyTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  state.currentTheme = theme;
-  localStorage.setItem('theme', theme);
+// Word Suggestions
+async function handleInput() {
+  const query = elements.wordInput.value.trim();
+  if (query.length > 1) {
+    fetchSuggestions(query);
+  } else {
+    hideSuggestions();
+  }
 }
 
-function toggleReadability() {
-  state.readabilityMode = !state.readabilityMode;
-  document.documentElement.setAttribute('data-readability', state.readabilityMode);
-  localStorage.setItem('readability', state.readabilityMode);
-  elements.readabilityToggle.innerHTML = state.readabilityMode 
-    ? '<i class="fas fa-text-height"></i>'
-    : '<i class="fas fa-text-width"></i>';
-  
-  if (state.currentWord) searchWord();
+async function fetchSuggestions(query) {
+  try {
+    // First check common words
+    const commonMatches = COMMON_WORDS.filter(w => 
+      w.toLowerCase().startsWith(query.toLowerCase())
+    ).slice(0, 5);
+    
+    if (commonMatches.length > 0) {
+      showSuggestions(commonMatches);
+      return;
+    }
+    
+    // Then try API
+    const response = await fetch(`https://api.datamuse.com/words?sp=${query}*&max=5`);
+    if (!response.ok) throw new Error('No suggestions');
+    const data = await response.json();
+    showSuggestions(data.map(item => item.word));
+  } catch (error) {
+    hideSuggestions();
+  }
 }
 
-function toggleAdvancedSearch() {
-  elements.advancedSearch.style.display = 
-    elements.advancedSearch.style.display === 'block' ? 'none' : 'block';
+function showSuggestions(suggestions) {
+  if (!suggestions || !suggestions.length) {
+    hideSuggestions();
+    return;
+  }
+  elements.suggestionsDiv.innerHTML = suggestions.map(word => `
+    <div class="suggestion-item" onclick="searchFromHistory('${word}')">${word}</div>
+  `).join('');
+  elements.suggestionsDiv.style.display = 'block';
 }
 
-function switchTab(tabId) {
-  document.querySelectorAll('.tab-btn, .tab-content').forEach(el => {
-    el.classList.remove('active');
-  });
-  document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
-  document.getElementById(`${tabId}-tab`).classList.add('active');
+// Random Word
+async function getRandomWord() {
+  try {
+    // 80% chance of using common words
+    if (Math.random() > 0.2) {
+      const randomWord = COMMON_WORDS[Math.floor(Math.random() * COMMON_WORDS.length)];
+      elements.wordInput.value = randomWord;
+      searchWord();
+      return;
+    }
+    
+    // Fallback to API
+    const response = await fetch('https://random-word-api.herokuapp.com/word?number=1');
+    if (!response.ok) throw new Error('Failed to get random word');
+    const [randomWord] = await response.json();
+    elements.wordInput.value = randomWord;
+    searchWord();
+  } catch (error) {
+    // Final fallback
+    const randomWord = COMMON_WORDS[Math.floor(Math.random() * COMMON_WORDS.length)];
+    elements.wordInput.value = randomWord;
+    searchWord();
+  }
 }
 
+// History and Favorites
 function addToHistory(word) {
-  if (!state.searchHistory.includes(word.toLowerCase())) {
-    state.searchHistory.unshift(word.toLowerCase());
+  const lowerWord = word.toLowerCase();
+  if (!state.searchHistory.includes(lowerWord)) {
+    state.searchHistory.unshift(lowerWord);
     if (state.searchHistory.length > 10) state.searchHistory.pop();
     localStorage.setItem('dictionaryHistory', JSON.stringify(state.searchHistory));
     displayHistory();
@@ -229,6 +267,7 @@ function addToHistory(word) {
 }
 
 function displayHistory() {
+  if (!elements.historySection || !elements.historyList) return;
   if (state.searchHistory.length === 0) {
     elements.historySection.style.display = 'none';
     return;
@@ -239,19 +278,18 @@ function displayHistory() {
   `).join('');
 }
 
-function clearHistory() {
-  state.searchHistory = [];
-  localStorage.removeItem('dictionaryHistory');
-  displayHistory();
-}
-
 function toggleFavorite() {
   if (!state.currentWord) return;
   
-  const index = state.favorites.findIndex(fav => fav.word.toLowerCase() === state.currentWord.toLowerCase());
+  const index = state.favorites.findIndex(fav => 
+    fav.word.toLowerCase() === state.currentWord.toLowerCase()
+  );
   
   if (index === -1) {
-    state.favorites.unshift({ word: state.currentWord, date: new Date().toISOString() });
+    state.favorites.unshift({ 
+      word: state.currentWord, 
+      date: new Date().toISOString() 
+    });
     elements.favoriteBtn.innerHTML = '<i class="fas fa-star"></i>';
   } else {
     state.favorites.splice(index, 1);
@@ -273,6 +311,94 @@ function displayFavorites() {
   `).join('');
 }
 
+// Tab and UI Functions
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  document.getElementById(`${tabName}-tab`).classList.add('active');
+  document.querySelector(`.tab-btn[data-tab="${tabName}"]`).classList.add('active');
+}
+
+function toggleAdvancedSearch() {
+  const advancedSearch = document.getElementById('advancedSearch');
+  advancedSearch.style.display = advancedSearch.style.display === 'grid' ? 'none' : 'grid';
+}
+
+function setupAdvancedFeatures() {
+  // Helper to robustly call feature init
+  function safeInit(fnName) {
+    if (typeof window[fnName] === 'function') {
+      try {
+        window[fnName]();
+      } catch (e) {
+        console.error(`Error running ${fnName}:`, e);
+      }
+    } else {
+      console.warn(`Feature init function '${fnName}' not found.`);
+    }
+  }
+
+  // Crossword tab
+  const crosswordBtn = document.querySelector('.tab-btn[data-tab="crossword"]');
+  if (crosswordBtn) {
+    crosswordBtn.addEventListener('click', () => {
+      switchTab('crossword');
+      // Clear previous pattern/results
+      const patternInput = document.getElementById('crosswordPattern');
+      const resultsDiv = document.getElementById('crosswordResults');
+      if (patternInput) patternInput.value = '';
+      if (resultsDiv) resultsDiv.innerHTML = '';
+      safeInit('initCrossword');
+    });
+  }
+
+  // Quiz tab
+  const quizBtn = document.querySelector('.tab-btn[data-tab="quiz"]');
+  if (quizBtn) {
+    quizBtn.addEventListener('click', () => {
+      switchTab('quiz');
+      safeInit('initQuiz');
+    });
+  }
+
+  // Flashcards tab
+  const flashcardsBtn = document.querySelector('.tab-btn[data-tab="flashcards"]');
+  if (flashcardsBtn) {
+    flashcardsBtn.addEventListener('click', () => {
+      switchTab('flashcards');
+      safeInit('initFlashcards');
+    });
+  }
+
+  // Favorites tab
+  const favoritesBtn = document.querySelector('.tab-btn[data-tab="favorites"]');
+  if (favoritesBtn) {
+    favoritesBtn.addEventListener('click', () => {
+      switchTab('favorites');
+      displayFavorites();
+    });
+  }
+
+  // On DOMContentLoaded, try to initialize all features once in case their tabs are already visible
+  document.addEventListener('DOMContentLoaded', () => {
+    safeInit('initCrossword');
+    safeInit('initQuiz');
+    safeInit('initFlashcards');
+  });
+}
+
+// Helper Functions
+// Readability Toggle
+function toggleReadability() {
+  state.readabilityMode = !state.readabilityMode;
+  localStorage.setItem('readability', state.readabilityMode);
+  document.documentElement.setAttribute('data-readability', state.readabilityMode);
+}
 function getPartOfSpeechIcon(pos) {
   const icons = {
     noun: 'book', verb: 'running', adjective: 'font', adverb: 'comment-alt',
@@ -312,37 +438,7 @@ function filterMeanings(meanings) {
   });
 }
 
-function loadPreferences() {
-  if (state.readabilityMode) {
-    document.documentElement.setAttribute('data-readability', 'true');
-    elements.readabilityToggle.innerHTML = '<i class="fas fa-text-height"></i>';
-  }
-}
-
-function setupTouchGestures() {
-  document.addEventListener('touchstart', (e) => {
-    state.touchStartX = e.touches[0].clientX;
-  });
-  
-  document.addEventListener('touchend', (e) => {
-    if (!state.touchStartX) return;
-    const touchEndX = e.changedTouches[0].clientX;
-    const diff = state.touchStartX - touchEndX;
-    
-    if (Math.abs(diff) > 50) {
-      const tabs = Array.from(document.querySelectorAll('.tab-btn'));
-      const currentTab = document.querySelector('.tab-btn.active');
-      const currentIndex = tabs.indexOf(currentTab);
-      
-      if (diff > 0 && currentIndex < tabs.length - 1) {
-        switchTab(tabs[currentIndex + 1].dataset.tab);
-      } else if (diff < 0 && currentIndex > 0) {
-        switchTab(tabs[currentIndex - 1].dataset.tab);
-      }
-    }
-  });
-}
-
+// Word of the Day
 async function getWordOfTheDay() {
   try {
     const today = new Date().toDateString();
@@ -356,8 +452,7 @@ async function getWordOfTheDay() {
       }
     }
     
-    const response = await fetch('https://random-word-api.herokuapp.com/word?number=1');
-    const [word] = await response.json();
+    const word = COMMON_WORDS[Math.floor(Math.random() * COMMON_WORDS.length)];
     localStorage.setItem('wordOfTheDay', JSON.stringify({ word, date: today }));
     displayWordOfTheDay(word);
   } catch (error) {
@@ -372,18 +467,7 @@ function displayWordOfTheDay(word) {
   `;
 }
 
-async function getRandomWord() {
-  try {
-    const response = await fetch('https://random-word-api.herokuapp.com/word');
-    if (!response.ok) throw new Error('Failed to get random word');
-    const [randomWord] = await response.json();
-    elements.wordInput.value = randomWord;
-    searchWord();
-  } catch (error) {
-    showError('Failed to get random word. Please try again.');
-  }
-}
-
+// Window Functions
 window.searchFromHistory = function(word) {
   elements.wordInput.value = word;
   searchWord();
@@ -398,8 +482,49 @@ window.removeFavorite = function(word) {
 
 function updateFavoriteButton(word) {
   if (!word) return;
-  const isFavorite = state.favorites.some(fav => fav.word.toLowerCase() === word.toLowerCase());
-  elements.favoriteBtn.innerHTML = isFavorite ? '<i class="fas fa-star"></i>' : '<i class="far fa-star"></i>';
+  const isFavorite = state.favorites.some(fav => 
+    fav.word.toLowerCase() === word.toLowerCase()
+  );
+  elements.favoriteBtn.innerHTML = isFavorite 
+    ? '<i class="fas fa-star"></i>' 
+    : '<i class="far fa-star"></i>';
+}
+
+// Initialize
+function init() {
+  applyTheme(state.currentTheme);
+  setupEventListeners();
+  displayHistory();
+  displayFavorites();
+  getWordOfTheDay();
+  setupAdvancedFeatures();
+}
+
+function setupEventListeners() {
+  elements.wordInput.addEventListener('keypress', (e) => e.key === 'Enter' && searchWord());
+  elements.wordInput.addEventListener('input', debounce(handleInput, 300));
+  
+  elements.speakBtn.addEventListener('click', speakWord);
+  elements.favoriteBtn.addEventListener('click', toggleFavorite);
+  elements.clearHistoryBtn?.addEventListener('click', clearHistory);
+  elements.readabilityToggle.addEventListener('click', toggleReadability);
+  elements.advancedSearchToggle.addEventListener('click', toggleAdvancedSearch);
+  elements.randomBtn.addEventListener('click', getRandomWord);
+  
+  document.querySelectorAll('.theme-options button').forEach(btn => {
+    btn.addEventListener('click', () => applyTheme(btn.dataset.theme));
+  });
+  
+  // Remove default tab switching here, handled in setupAdvancedFeatures for correct feature initialization
+  // document.querySelectorAll('.tab-btn').forEach(btn => {
+  //   btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  // });
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  state.currentTheme = theme;
+  localStorage.setItem('theme', theme);
 }
 
 init();
